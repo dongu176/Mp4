@@ -28,7 +28,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install yt-dlp google-genai cairosvg Pillow pillow-heif pypdf score-schema
+          pip install yt-dlp google-genai cairosvg Pillow pillow-heif pypdf jsonschema
 
       - name: Install System Dependencies
         run: |
