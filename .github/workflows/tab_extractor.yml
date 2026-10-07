@@ -6,14 +6,14 @@ on:
       youtube_url:
         description: 'YouTube Video URL'
         required: true
-        default: 'https://www.youtube.com/watch?v=EXAMPLE'
+        type: string
       expected_measures:
-        description: 'Expected Total Measures Count'
+        description: 'Expected Total Measures (0 if unknown)'
         required: false
-        default: '112'
+        default: '0'
 
 jobs:
-  build-and-extract:
+  extract-tab:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,26 +25,34 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install yt-dlp google-genai cairosvg Pillow pillow-heif pypdf score-schema
+
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg libcairo2-dev fonts-nanum fonts-dejavu
+          sudo apt-get install -y lilypond ffmpeg
 
-      - name: Install Python Dependencies
+      # GitHub Secrets에 등록된 쿠키 텍스트를 cookies.txt 파일로 복원
+      - name: Create cookies.txt from Secret
         run: |
-          python -m pip install --upgrade pip
-          pip install opencv-python-headless numpy pillow yt-dlp google-genai jsonschema cairosvg
+          echo "${{ secrets.YOUTUBE_COOKIES }}" > cookies.txt
 
-      - name: Run TAB Extraction Pipeline
+      # 파이썬 추출 메인 스크립트 실행
+      - name: Run TAB Extraction
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          SAMPLE_SEC: '0.10'
-          EXPECTED_MEASURES: ${{ github.event.inputs.expected_measures }}
         run: |
-          python extract.py "${{ github.event.inputs.youtube_url }}"
+          python extract.py --url "${{ github.event.inputs.youtube_url }}" --expected-measures ${{ github.event.inputs.expected_measures }}
 
+      # 결과물 파일 업로드
       - name: Upload Output Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tab-score-outputs
-          path: output/
+          path: |
+            *.pdf
+            *.svg
+            score.json
